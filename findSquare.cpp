@@ -36,20 +36,29 @@ int findBlobs(Mat image){
                         break;
                     } else if(k == blobs.size() - 1){
                         //blob *blob1 = (blob *)malloc(sizeof (blob));
-                        blob *blob1 = new blob;
-                        blob1->topleft = Point2i(row - 10, col - 75);
-                        blob1->botright = Point2i(row + 210, col + 125);
-                        blob1->row = row;
-                        blob1->col = col;
-                        blob1->count = 1;
+                        //blob *blob1 = new blob;
 
-                        blobs.push_back(blob1);
+
+                        if(row - 10 < 0 || col - 75 < 0 ||
+                           row + 210 > res_y || col + 125 > res_x){
+                            return -1;
+                        }
                         
-                        if(blob1->topleft.x < 0 || blob1->topleft.y < 0 ||
+                        blobs.push_back(blob());
+                        
+                        blobs[k].topleft = Point2i(row - 10, col - 75);
+                        blobs[k].botright = Point2i(row + 210, col + 125);
+                        blobs[k].row = row;
+                        blobs[k].col = col;
+                        blobs[k].count = 1;
+
+                
+                        
+                        /* if(blob1->topleft.x < 0 || blob1->topleft.y < 0 ||
                            blob1->botright.x > res_y || blob1->botright.y > res_x){
                             delete blob1;
                             return -1;
-                        }
+                            }*/
                     }
                 }
             }
@@ -164,8 +173,11 @@ int main( int argc, char** argv )
 
       waitKey(0); // Wait for a keystroke in the window
 
-      for(int i = 0; i < blobs.size(); i++){
-          delete blobs[i];
-      }
+      //I dont think i have freed this memory
+      /* for(int i = 0; i < blobs.size(); i++){
+          blob temp = blobs[i];
+          blobs.erase(i);
+          delete temp;
+          }*/ 
     return 0;
 }
