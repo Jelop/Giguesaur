@@ -22,20 +22,20 @@ vector<blob> blobs;
 
 int findBlobs(Mat image){
 
-    cout << "in findBlobs" << endl;
+    //cout << "in findBlobs" << endl;
     Mat temp;
     image.copyTo(temp);
-    cout << "about to enter for" << endl;
+    // cout << "about to enter for" << endl;
     for(int row = 0; row < temp.rows; row++){
         for(int col = 0; col < temp.cols; col++){
-            if(temp.at<int>(row,col) == 0){
-                cout << "in if" << endl;
+            if(temp.at<uchar>(row,col) == 0){
+                //cout << "in if" << endl;
                 bool blob_exists = false;
                 for(int k = 0; k < blobs.size(); k++){
-                    cout << "iterating over blob vector" << endl;
+                    //cout << "iterating over blob vector" << endl;
                     if(row >= blobs[k].topleft.x && row <= blobs[k].botright.x &&
                        col >= blobs[k].topleft.y && col <= blobs[k].botright.y){
-                        cout << "added to existing blob" << endl;
+                        //cout << "added to existing blob" << endl;
                         blobs[k].row += row;
                         blobs[k].col += col;
                         blobs[k].count++;
@@ -46,12 +46,15 @@ int findBlobs(Mat image){
 
                 if(!blob_exists){
 
-                    if(row - 10 < 0 || col - 75 < 0 ||
-                       row + 210 > res_y || col + 125 > res_x){
-                        return -1;
-                    }
+                    // might need to make the box a square...
                     
-                    cout << "creating new blob" << endl;
+                    /* if(row - 10 < 0 || col - 75 < 0 ||
+                       row + 210 > res_y || col + 125 > res_x){
+                        cout << " early termination" << endl;
+                        return -1;
+                        }*/
+                    
+                    //cout << "creating new blob" << endl;
                     blobs.push_back(blob());
                     int index = blobs.size()-1;
                     
@@ -146,27 +149,27 @@ int main( int argc, char** argv )
 
     //cvtColor(image,image, CV_RGB2GRAY);
     //GaussianBlur(image,image, Size(9, 9), 2, 2 );
-    /*int pixel;
+    /*   int pixel;
     for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
             //cout << "before pixel assignment" << endl;
-            if(i != 1078 && j != 1724)
-            pixel = image.at<int>(i,j);
+        
+            pixel = image.at<uchar>(i,j);
             //  printf("i = %d, j = %d\n", i,j);
             if(pixel < 0 || pixel > 50){
                 // cout << "before if" << endl;
                 image.at<int>(i,j) = 255;
-            } else {
+                } else {
                 // cout<< "before else" << endl;
                 image.at<int>(i,j) = 0;
-            }
-        }
-        }*/
+                }
+                }
+                }*/
 
-    // threshold(image, image, 50, 255, THRESH_BINARY);
+    threshold(image, image, 50, 255, THRESH_BINARY);
     /*for(int i = 0; i < image.rows; i++){
         for(int j = 0; j < image.cols; j++){
-            if(image.at<int>(i,j) != 0 && image.at<int>(i,j) != 255)
+            if(image.at<uchar>(i,j) != 0 && image.at<uchar>(i,j) != 255)
                 cout << image.at<int>(i,j) << endl;
         }
         }*/
