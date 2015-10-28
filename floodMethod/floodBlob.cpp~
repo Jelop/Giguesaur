@@ -1,0 +1,18 @@
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <iostream>
+
+int main(int argc, char **argv){
+
+    if(argc != 2){
+        std::cout << "Usage: ./execName ImagetoLoad" << std::endl;
+        return -1;
+    }
+
+    cv::Mat image;
+    image = imread(argv[1]);
+    cv::imshow("",image);
+    cv::waitKey(0);
+    return 0;
+}
