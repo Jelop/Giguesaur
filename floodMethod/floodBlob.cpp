@@ -7,9 +7,7 @@
 #define VISITED 1
 #define MARKED 2
 #define BLACK 3
-
-#define OP1 >=
-#define OP2 <
+#define TEMP 4
 
 struct fill_queue{
     cv::Point2i queue[10000];
@@ -33,7 +31,7 @@ cv::Mat table;
  * a blob. 
  */
 
-cv::Point2i floodFill(cv::Mat image, unsigned char thresh, cv::Point2i seed, int black_flag){
+cv::Point2i floodFill(cv::Mat image, unsigned char lower, unsigned char upper, cv::Point2i seed, int black_flag){
 
     cv::Point2i sum = cv::Point2i(0,0);
     int count = 0;
@@ -46,18 +44,28 @@ cv::Point2i floodFill(cv::Mat image, unsigned char thresh, cv::Point2i seed, int
     circ_queue.tail = (circ_queue.tail + 1) % 10000;
 
     while(circ_queue.head != circ_queue.tail){
-
+        
         seed = circ_queue.queue[circ_queue.head];
         circ_queue.head = (circ_queue.head + 1) % 10000;
-        while(image.at<uchar>(seed.x, seed.y - 1) OP1 thresh){
+
+        while(image.at<uchar>(seed.x, seed.y-1) >= lower &&
+              image.at<uchar>(seed.x, seed.y-1) < upper){
             seed.y--;
         }
-        if(image.at<uchar>(seed.x-1, seed.y) OP1 thresh && table.at<uchar>(seed.x-1, seed.y) == UNVISITED){
+
+        unsigned char value = image.at<uchar>(seed.x-1, seed.y);
+        unsigned char state = table.at<uchar>(seed.x-1, seed.y);
+        if(value >= lower && value < upper
+           && (state == UNVISITED || state == TEMP)){
             circ_queue.queue[circ_queue.tail] = cv::Point2i(seed.x-1, seed.y);
             circ_queue.tail = (circ_queue.tail + 1) % 10000;
             table.at<uchar>(seed.x-1, seed.y) = MARKED;
         }
-        if(image.at<uchar>(seed.x+1, seed.y) OP1 thresh && table.at<uchar>(seed.x+1, seed.y) == UNVISITED){
+
+        value = image.at<uchar>(seed.x+1, seed.y);
+        state = table.at<uchar>(seed.x+1, seed.y);
+        if(value >= lower && value < upper &&
+           (state == UNVISITED ||  state == TEMP)){
             circ_queue.queue[circ_queue.tail] = cv::Point2i(seed.x+1, seed.y);
             circ_queue.tail = (circ_queue.tail + 1) %10000;
             table.at<uchar>(seed.x+1, seed.y) = MARKED;
@@ -66,10 +74,11 @@ cv::Point2i floodFill(cv::Mat image, unsigned char thresh, cv::Point2i seed, int
 
         int run_length = 0;
         do{
+            //std::cout << count << std::endl;
             if(black_flag == 0){
-                input.at<cv::Vec3b>(seed.x, seed.y) = cv::Vec3b(255,0,0);
+                // input.at<cv::Vec3b>(seed.x, seed.y) = cv::Vec3b(255,0,0);
             } else {
-                input.at<cv::Vec3b>(seed.x, seed.y) = cv::Vec3b(0,255,0);
+                //input.at<cv::Vec3b>(seed.x, seed.y) = cv::Vec3b(0,255,0);
             }
             table.at<uchar>(seed.x, seed.y) = VISITED;
             sum.x += seed.x;
@@ -80,12 +89,15 @@ cv::Point2i floodFill(cv::Mat image, unsigned char thresh, cv::Point2i seed, int
             if(run_length > 150 && black_flag > 0)
                 return cv::Point2i(-1,-1);
 
-            if(image.at<uchar>(seed.x-1, seed.y) OP2 thresh){
+            value = image.at<uchar>(seed.x-1, seed.y);
+            if(!(value >= lower && value < upper)){
                 
                 table.at<uchar>(seed.x-1, seed.y) = BLACK;
-                
-                if(image.at<uchar>(seed.x-1, seed.y+1) OP1 thresh &&
-                   table.at<uchar>(seed.x-1, seed.y+1) == UNVISITED){
+
+                value = image.at<uchar>(seed.x-1, seed.y+1);
+                state = table.at<uchar>(seed.x-1, seed.y+1);
+                if(value >= lower && value < upper &&
+                   (state == UNVISITED || state == TEMP)){
 
                     circ_queue.queue[circ_queue.tail] = cv::Point2i(seed.x-1, seed.y+1);
                     circ_queue.tail = (circ_queue.tail + 1) % 10000;
@@ -93,12 +105,15 @@ cv::Point2i floodFill(cv::Mat image, unsigned char thresh, cv::Point2i seed, int
                 }
             }
 
-            if(image.at<uchar>(seed.x+1, seed.y) OP2 thresh){
+            value = image.at<uchar>(seed.x+1, seed.y);
+            if(!(value >= lower && value < upper)){
                 
                 table.at<uchar>(seed.x+1, seed.y) = BLACK;
-                
-                if(image.at<uchar>(seed.x+1, seed.y+1) OP1 thresh &&
-                   table.at<uchar>(seed.x+1, seed.y+1) == UNVISITED){
+
+                value = image.at<uchar>(seed.x+1, seed.y+1);
+                state = table.at<uchar>(seed.x+1, seed.y+1);
+                if(value >= lower && value < upper &&
+                   (state == UNVISITED || state  == TEMP)){
 
                     circ_queue.queue[circ_queue.tail] = cv::Point2i(seed.x+1, seed.y+1);
                     circ_queue.tail = (circ_queue.tail + 1) % 10000;
@@ -107,11 +122,17 @@ cv::Point2i floodFill(cv::Mat image, unsigned char thresh, cv::Point2i seed, int
             }
          
             seed.y++;
-        }while(image.at<uchar>(seed.x,seed.y) OP1 thresh);
+            // std::cout << seed.x << " " << seed.y << " " <<  (int)image.at<uchar>(seed.x,seed.y) <<std::endl;
+           
+        }while(image.at<uchar>(seed.x,seed.y) >= lower && image.at<uchar>(seed.x,seed.y) < upper);
             
         
     }
     // std::cout << sum << std::endl;
+
+    if(count < 7000){
+        return cv::Point2i(-1,-1);
+    }
     sum.x /= count;
     sum.y /= count;
     // std::cout << sum << std::endl;
@@ -135,7 +156,8 @@ int main(int argc, char **argv){
 
     int row = 1109;
     int col = 1630;
-    std::cout << floodFill(image, 140, cv::Point2i(row,col), 0) << std::endl;
+    //casting suppressed warning about wrap around but probably didn't change behaviour
+    std::cout << floodFill(image, 140, (unsigned char)255, cv::Point2i(row,col), 0) << std::endl;
 
     for(int i = 0; i < table.rows; i++){
         for(int j = 0; j < table.cols; j++){
@@ -143,33 +165,32 @@ int main(int argc, char **argv){
             if(state == VISITED){
                 table.at<uchar>(i,j) = BLACK;
             } else if(state == BLACK){
-                table.at<uchar>(i,j) = MARKED;
+                table.at<uchar>(i,j) = TEMP;
             }
         }
     }
 
-  
-    #undef OP1
-    #undef OP2
-
-    #define OP1 <
-    #define OP2 >=
 
     std::vector<cv::Point2i> blobs;
     //Flood fill the blacks now!
     for(int i = 0; i < table.rows; i++){
         for(int j = 0; j < table.cols; j++){
             unsigned char state = table.at<uchar>(i,j);
-            if(state == MARKED){
-                cv::Point2i temp = floodFill(image,140, cv::Point2i(i,j), 1);
+            if(state == TEMP){
+                cv::Point2i temp = floodFill(image,0, 140, cv::Point2i(i,j), 1);
                 if(temp.x > -1)
                     blobs.push_back(temp);
             }
         }
     }
-    // std::cout << blobs << std::endl;
+     std::cout << blobs << std::endl;
     // threshold(image, image, 140, 255, cv::THRESH_BINARY);
     // cv::namedWindow("Output", cv::WINDOW_NORMAL);
+
+     for(int i = 0; i < blobs.size(); i++){
+         cv::Point centre(blobs[i].y, blobs[i].x);
+         circle(input, centre, 3, cv::Scalar(255,255,255), -1, 8, 0);
+     }
     cv::resize(input, input, cv::Size(input.cols/4, input.rows/4));
     cv::imshow("Output", input);
     // cv::imwrite("output.png", image);
