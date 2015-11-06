@@ -18,18 +18,6 @@ struct fill_queue{
 cv::Mat input;
 cv::Mat table;
 
-/**
- * Could use an auxiliary function for the conditionals. Pass a < or > and a thresh. Makes it more
- * general. Then could calculate the running sum and average for every flood fill.
- *
- * Perhaps use another function between filling the white and filling the blobs. This other function
- * would invert the table(which would need to be made global), so that all visted cells would be
- * made black, and all previously black cells would be considered marked? Then scan through the
- * persistent table and find the first marked value to use as a seed. Then once that blob has been
- * filled average its values to get its centre and all it's pixels will be considered visited.
- * DON'T FORGET! That a run limit on black pixels is necessary so that the table won't be considered
- * a blob. 
- */
 
 cv::Point2i floodFill(cv::Mat image, unsigned char lower, unsigned char upper, cv::Point2i seed, int black_flag){
 
@@ -157,8 +145,11 @@ int main(int argc, char **argv){
     int row = 1109;
     int col = 1630;
     //casting suppressed warning about wrap around but probably didn't change behaviour
-    std::cout << floodFill(image, 140, (unsigned char)255, cv::Point2i(row,col), 0) << std::endl;
+    //Might exclude 255 as a value. A perfectly white pixel would be excluded.
 
+  
+    std::cout << floodFill(image, 140, (unsigned char)255, cv::Point2i(row,col), 0) << std::endl;
+   
     for(int i = 0; i < table.rows; i++){
         for(int j = 0; j < table.cols; j++){
             unsigned char state = table.at<uchar>(i,j);
@@ -170,7 +161,7 @@ int main(int argc, char **argv){
         }
     }
 
-
+    clock_t startTime = clock();
     std::vector<cv::Point2i> blobs;
     //Flood fill the blacks now!
     for(int i = 0; i < table.rows; i++){
@@ -183,6 +174,7 @@ int main(int argc, char **argv){
             }
         }
     }
+    std::cout << double(clock() - startTime) / (double) CLOCKS_PER_SEC << std::endl;
      std::cout << blobs << std::endl;
     // threshold(image, image, 140, 255, cv::THRESH_BINARY);
     // cv::namedWindow("Output", cv::WINDOW_NORMAL);
