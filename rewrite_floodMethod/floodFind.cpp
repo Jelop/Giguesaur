@@ -24,7 +24,7 @@ struct fill_data{
     //made it non static, beware memory leak?
     std::vector<cv::Point2i> black_list;
     //might need to make min
-    int max_x, max_y, min_x, min_y, dot_tr, dot_br, dot_tl, dot_bl;
+    cv::Point max_x, max_y, min_x, min_y, dot_tr, dot_br, dot_tl, dot_bl;
 };
 
 cv::Mat input;
@@ -57,7 +57,7 @@ cv::Point2i flood_fill(cv::Mat image, unsigned char lower, unsigned char upper, 
             value = image.at<uchar>(seed.x, seed.y-1);
         }
 
-        //might flip out if white near edges
+        //might flip out if white near edges, UPDATE: Now start scanning from skip.
         value = image.at<uchar>(seed.x-skip, seed.y);
         state = table.at<uchar>(seed.x-skip, seed.y);
         if(value >= lower && value < upper
@@ -92,20 +92,29 @@ cv::Point2i flood_fill(cv::Mat image, unsigned char lower, unsigned char upper, 
 
             else{
                 temp_fill.white_pixels++;
+                input.at<cv::Vec3b>(seed.x,seed.y) = cv::Vec3b(0,0,255);
                 if(run_start){
-                    if(seed.x < temp_fill.min_x)
-                        temp_fill.min_x = seed.x;
-                    if(seed.y < temp_fill.min_y)
-                        temp_fill.min_y = seed.y;
+                    if(seed.x < temp_fill.min_x.x){
+                        temp_fill.min_x.x = seed.x;
+                        temp_fill.min_x.y = seed.y;
+                    }
+                    if(seed.y < temp_fill.min_y.y){
+                        temp_fill.min_y.y = seed.y;
+                        temp_fill.min_y.x = seed.x;
+                    }
                     run_start = false;
                 }
 
                 value = image.at<uchar>(seed.x, seed.y+skip);
                 if(!(value >= lower && value < upper)){
-                    if(seed.x > temp_fill.max_x)
-                        temp_fill.max_x = seed.x;
-                    if(seed.y > temp_fill.max_y)
-                        temp_fill.max_y = seed.y;
+                    if(seed.x > temp_fill.max_x.x){
+                        temp_fill.max_x.x = seed.x;
+                        temp_fill.max_x.y = seed.y;
+                    }
+                    if(seed.y > temp_fill.max_y.y){
+                        temp_fill.max_y.y = seed.y;
+                        temp_fill.max_y.x = seed.x;
+                    }
                     //might not be necessary
                     table.at<uchar>(seed.x, seed.y+skip) = BLACK;
                     temp_fill.black_list.push_back(cv::Point2i(seed.x, seed.y+skip));
@@ -142,7 +151,9 @@ cv::Point2i flood_fill(cv::Mat image, unsigned char lower, unsigned char upper, 
             else if(!(value >= lower && value < upper)){
                 mark_flag_down = true;
             }
-
+            std::cout << seed.x << " " << seed.y << "\n"
+                      << temp_fill.black_list.size() << "\n" <<
+                circ_queue.head << " " << circ_queue.tail << std::endl;
             seed.y += skip;
         }while(image.at<uchar>(seed.x, seed.y) >= lower && image.at<uchar>(seed.x, seed.y) < upper);
     }
@@ -168,33 +179,34 @@ int main(int argc, char **argv){
     table = cv::Mat::zeros(image.rows,image.cols, CV_8UC1);
     //cv::imwrite("output.png", image);
     max_white.white_pixels = 0;
-    max_white.max_x = 0;
-    max_white.max_y = 0;
-    max_white.min_x = 4000;
-    max_white.min_y = 4000;
+    max_white.max_x = cv::Point2i(0,0);
+    max_white.max_y = cv::Point2i(0,0);
+    max_white.min_x = cv::Point2i(4000,4000);
+    max_white.min_y = cv::Point2i(4000,4000);
     
     temp_fill.white_pixels = 0;
-    temp_fill.max_x = 0;
-    temp_fill.max_y = 0;
-    temp_fill.min_x = 4000;
-    temp_fill.min_y = 4000;
+    temp_fill.max_x = cv::Point2i(0,0);
+    temp_fill.max_y = cv::Point2i(0,0);
+    temp_fill.min_x = cv::Point2i(4000,4000);
+    temp_fill.min_y = cv::Point2i(4000,4000);
     int count = 0;
-    for(int i = 0; i < image.rows; i++){
-        for(int j = 0; j < image.cols; j++){
+    for(int i = skip; i < image.rows-skip; i+=skip){
+        for(int j = skip; j < image.cols-skip; j+=skip){
             if(image.at<uchar>(i,j) >= thresh && table.at<uchar>(i,j) == UNVISITED){
                 //std::cout << "i = " << i << " j = " << j << std::endl;
                 //issue with 255 value, less than in algorithm
-                std::cout << (int)image.at<uchar>(i,j) << std::endl;
-                std::cout << ++count << std::endl;
+                 std::cout << (int)image.at<uchar>(i,j) << std::endl;
+                //std::cout << ++count << std::endl;
                 flood_fill(image, 140, 255, cv::Point2i(i,j), skip, true); 
                 if(temp_fill.white_pixels > max_white.white_pixels){
                     max_white = temp_fill;
-                    temp_fill.white_pixels = 0;
-                    temp_fill.max_x = 0;
-                    temp_fill.max_y = 0;
-                    temp_fill.min_x = 4000;
-                    temp_fill.min_y = 4000;
                 }
+                temp_fill.white_pixels = 0;
+                temp_fill.black_list.clear();
+                temp_fill.max_x = cv::Point2i(0,0);
+                temp_fill.max_y = cv::Point2i(0,0);
+                temp_fill.min_x = cv::Point2i(4000,4000);
+                temp_fill.min_y = cv::Point2i(4000,4000);
             }
         }
     }
@@ -213,7 +225,22 @@ int main(int argc, char **argv){
         }
     }
 
-    
+    // std::cout << max_white.white_pixels << std::endl;
+
+    cv::Point centre((max_white.max_y.y + max_white.min_y.y) / 2, (max_white.max_x.x + max_white.min_x.x) /2);
+    circle(input,centre,3,cv::Scalar(255,0,0), -1,8,0);
+
+    cv::Point max_x(max_white.max_x.y, max_white.max_x.x);
+    cv::Point max_y(max_white.max_y.y, max_white.max_y.x);
+    cv::Point min_x(max_white.min_x.y, max_white.min_x.x);
+    cv::Point min_y(max_white.min_y.y, max_white.min_y.x);
+    circle(input, max_x, 8, cv::Scalar(0,255,0), -1, 8, 0);
+    circle(input, max_y, 8, cv::Scalar(0,0,255), -1, 8, 0);
+    circle(input, min_x, 8, cv::Scalar(255,255,0), -1, 8, 0);
+    circle(input, min_y, 8, cv::Scalar(255,0,0), -1, 8, 0);
+
+    std::cout << max_white.max_x << " " << max_white.max_y << "\n" <<
+        max_white.min_x << " " << max_white.min_y << std::endl;
     cv::resize(input, input, cv::Size(input.cols/4, input.rows/4));
     cv::imshow("Output", input);
     cv::waitKey(0);
